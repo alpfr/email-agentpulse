@@ -162,7 +162,7 @@ class ToolRegistry:
     ) -> RegisteredTool:
         """Register an async function as a tool."""
         tool_name = name or fn.__name__
-        if not asyncio.iscoroutinefunction(fn):
+        if not inspect.iscoroutinefunction(fn):
             raise TypeError(f"Tool '{tool_name}' must be an async function")
 
         tool = RegisteredTool(

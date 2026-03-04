@@ -7,6 +7,9 @@ Public API:
     from skeleton import InMemoryStateBackend, FileStateBackend
     from skeleton import StructuredPlanner, LLMPlanner, SimpleEvaluator, LLMEvaluator
     from skeleton import RedisStateBackend
+
+Gmail integration:
+    from skeleton.gmail_tools import gmail_registry
 """
 
 from .errors import (
