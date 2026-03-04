@@ -9,6 +9,7 @@ Usage:
 
 import base64
 import json
+import os
 import uuid
 
 from dotenv import load_dotenv
@@ -18,25 +19,67 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
-from langchain_core.messages import HumanMessage
 
-from agent import get_agent
-from tools.gmail_auth import get_gmail_service
-from tools.gmail_tools import (
-    _validate_email_address,
-    _validate_text_field,
-    _decode_body,
-    _clean_text,
-)
+DEMO_MODE = not os.path.exists(os.path.join(os.path.dirname(__file__), "credentials.json"))
+
+if not DEMO_MODE:
+    from langchain_core.messages import HumanMessage
+    from agent import get_agent
+    from tools.gmail_auth import get_gmail_service
+    from tools.gmail_tools import (
+        _validate_email_address,
+        _validate_text_field,
+        _decode_body,
+        _clean_text,
+    )
+
+# ---------------------------------------------------------------------------
+# Demo Data
+# ---------------------------------------------------------------------------
+DEMO_EMAILS = [
+    {"id": "msg001", "threadId": "t001", "snippet": "Let's sync on the Q1 roadmap and finalize priorities before Friday...", "labelIds": ["INBOX", "UNREAD"], "subject": "Q1 Roadmap Review", "from": "Sarah Chen <sarah.chen@acme.com>", "date": "Mon, 3 Mar 2026 09:15:00 -0500", "isUnread": True},
+    {"id": "msg002", "threadId": "t002", "snippet": "The CI pipeline for the email-agent module is passing. Ready for review...", "labelIds": ["INBOX"], "subject": "Re: CI/CD Pipeline Update", "from": "DevOps Bot <ci@acme.com>", "date": "Mon, 3 Mar 2026 08:42:00 -0500", "isUnread": False},
+    {"id": "msg003", "threadId": "t003", "snippet": "Hi team, please find the updated security audit report attached...", "labelIds": ["INBOX", "UNREAD", "IMPORTANT"], "subject": "Security Audit Report - Feb 2026", "from": "James Lee <james.lee@acme.com>", "date": "Sun, 2 Mar 2026 16:30:00 -0500", "isUnread": True},
+    {"id": "msg004", "threadId": "t004", "snippet": "The new TikTok integration is live in staging. Please test and provide feedback...", "labelIds": ["INBOX"], "subject": "TikTok Integration - Staging Ready", "from": "Maria Rodriguez <maria@acme.com>", "date": "Sun, 2 Mar 2026 14:20:00 -0500", "isUnread": False},
+    {"id": "msg005", "threadId": "t005", "snippet": "Reminder: Team standup moved to 10:30 AM starting this week...", "labelIds": ["INBOX"], "subject": "Standup Time Change", "from": "Alex Kim <alex.kim@acme.com>", "date": "Sat, 1 Mar 2026 11:00:00 -0500", "isUnread": False},
+    {"id": "msg006", "threadId": "t006", "snippet": "Your AWS bill for February 2026 is ready. Total: $1,247.83...", "labelIds": ["INBOX", "UNREAD"], "subject": "AWS Billing Statement - Feb 2026", "from": "AWS Billing <billing@aws.amazon.com>", "date": "Sat, 1 Mar 2026 06:00:00 -0500", "isUnread": True},
+    {"id": "msg007", "threadId": "t007", "snippet": "Great news! The patient portal passed all accessibility tests...", "labelIds": ["INBOX"], "subject": "Accessibility Audit Passed", "from": "QA Team <qa@acme.com>", "date": "Fri, 28 Feb 2026 17:45:00 -0500", "isUnread": False},
+    {"id": "msg008", "threadId": "t008", "snippet": "I've drafted the API documentation for the new endpoints. Take a look...", "labelIds": ["INBOX"], "subject": "API Docs Draft Ready", "from": "David Park <david.park@acme.com>", "date": "Fri, 28 Feb 2026 15:10:00 -0500", "isUnread": False},
+]
+
+DEMO_LABELS = [
+    {"id": "INBOX", "name": "INBOX", "type": "system"},
+    {"id": "SENT", "name": "SENT", "type": "system"},
+    {"id": "DRAFT", "name": "DRAFT", "type": "system"},
+    {"id": "TRASH", "name": "TRASH", "type": "system"},
+    {"id": "UNREAD", "name": "UNREAD", "type": "system"},
+    {"id": "STARRED", "name": "STARRED", "type": "system"},
+    {"id": "IMPORTANT", "name": "IMPORTANT", "type": "system"},
+    {"id": "lbl001", "name": "Projects", "type": "user"},
+    {"id": "lbl002", "name": "Urgent", "type": "user"},
+]
 
 app = FastAPI(title="Email Agent API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000", "http://localhost:3001",
+        "http://127.0.0.1:3000", "http://127.0.0.1:3001",
+        "https://emailaipulse.opssightai.com",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Health Check
+# ---------------------------------------------------------------------------
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes liveness/readiness probes."""
+    return {"status": "ok", "demo_mode": DEMO_MODE}
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +113,12 @@ class LabelRequest(BaseModel):
 @app.get("/api/emails")
 async def list_emails(q: str = "in:inbox", max_results: int = 20):
     """List emails matching a Gmail search query."""
+    if DEMO_MODE:
+        filtered = DEMO_EMAILS
+        if q and q != "in:inbox":
+            filtered = [e for e in DEMO_EMAILS if q.lower() in e["subject"].lower() or q.lower() in e["snippet"].lower()]
+        return {"emails": filtered[:max_results], "query": q}
+
     service = get_gmail_service()
     max_results = min(max_results, 50)
 
@@ -124,6 +173,12 @@ async def list_emails(q: str = "in:inbox", max_results: int = 20):
 @app.get("/api/emails/{message_id}")
 async def read_email(message_id: str):
     """Read a single email by ID."""
+    if DEMO_MODE:
+        for e in DEMO_EMAILS:
+            if e["id"] == message_id:
+                return {**e, "to": "you@acme.com", "body": f"Hi,\n\n{e['snippet']}\n\nThis is a demo email body for the prototype. In production, this would display the full email content fetched from the Gmail API.\n\nBest regards,\n{e['from'].split('<')[0].strip()}"}
+        raise HTTPException(status_code=404, detail="Email not found")
+
     service = get_gmail_service()
 
     try:
@@ -159,6 +214,9 @@ async def read_email(message_id: str):
 @app.post("/api/emails/send")
 async def send_email(req: ComposeRequest):
     """Send an email."""
+    if DEMO_MODE:
+        return {"message": "Email sent successfully (demo mode)", "id": f"demo_{uuid.uuid4().hex[:8]}"}
+
     from email.mime.text import MIMEText
 
     to = _validate_email_address(req.to)
@@ -198,6 +256,9 @@ async def send_email(req: ComposeRequest):
 @app.post("/api/emails/draft")
 async def draft_email(req: ComposeRequest):
     """Create a draft email."""
+    if DEMO_MODE:
+        return {"message": "Draft created successfully (demo mode)", "id": f"demo_{uuid.uuid4().hex[:8]}"}
+
     from email.mime.text import MIMEText
 
     to = _validate_email_address(req.to)
@@ -240,6 +301,9 @@ async def draft_email(req: ComposeRequest):
 @app.get("/api/labels")
 async def list_labels():
     """List all Gmail labels."""
+    if DEMO_MODE:
+        return {"labels": DEMO_LABELS}
+
     service = get_gmail_service()
     results = service.users().labels().list(userId="me").execute()
     labels = results.get("labels", [])
@@ -254,6 +318,9 @@ async def list_labels():
 @app.post("/api/emails/{message_id}/labels")
 async def modify_labels(message_id: str, req: LabelRequest):
     """Add or remove labels on an email."""
+    if DEMO_MODE:
+        return {"message": f"Labels updated for {message_id} (demo mode)"}
+
     if not req.add_labels and not req.remove_labels:
         raise HTTPException(status_code=400, detail="Must specify labels to add or remove")
 
@@ -282,6 +349,21 @@ async def chat_stream(message: str = Query(...), thread_id: str = Query(default=
     """SSE endpoint for streaming agent chat responses."""
     if not thread_id:
         thread_id = str(uuid.uuid4())
+
+    if DEMO_MODE:
+        import asyncio
+
+        async def demo_generator():
+            yield {"event": "thread_id", "data": json.dumps({"thread_id": thread_id})}
+            await asyncio.sleep(0.5)
+            yield {"event": "tool_call", "data": json.dumps({"name": "search_emails", "args": {"query": message}})}
+            await asyncio.sleep(0.8)
+            yield {"event": "tool_result", "data": json.dumps({"content": f"Found 3 emails matching '{message}'"})}
+            await asyncio.sleep(0.3)
+            yield {"event": "agent_message", "data": json.dumps({"content": f"I found 3 emails related to \"{message}\". Here's a summary:\n\n1. **Q1 Roadmap Review** from Sarah Chen - discusses priorities and planning\n2. **CI/CD Pipeline Update** from DevOps Bot - build status notification\n3. **Security Audit Report** from James Lee - February security findings\n\nWould you like me to open any of these, or perform another action?"})}
+            yield {"event": "done", "data": json.dumps({"status": "complete"})}
+
+        return EventSourceResponse(demo_generator())
 
     def event_generator():
         agent = get_agent()

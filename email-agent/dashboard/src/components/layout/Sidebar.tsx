@@ -67,6 +67,22 @@ export default function Sidebar({ onCompose }: SidebarProps) {
           );
         })}
       </ul>
+
+      {/* About link — bottom */}
+      <div className="px-3 pb-4">
+        <Link
+          href="/about"
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            pathname === "/about"
+              ? "bg-primary-50 text-primary-700"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          )}
+        >
+          <AboutIcon active={pathname === "/about"} />
+          About
+        </Link>
+      </div>
     </nav>
   );
 }
@@ -99,6 +115,14 @@ function DraftIcon({ active }: { active: boolean }) {
   return (
     <svg className={cn("h-5 w-5", active ? "text-primary-600" : "text-slate-400")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+
+function AboutIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={cn("h-5 w-5", active ? "text-primary-600" : "text-slate-400")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
 }

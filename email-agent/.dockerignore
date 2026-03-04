@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets (never bake into image)
+.env
+credentials.json
+token.json
+
+# Frontend (has its own Dockerfile)
+dashboard/
+
+# IDE / OS
+.git/
+.DS_Store
+*.swp
+*.swo
+
+# Tests / misc
+*.zip
+*.tar.gz
