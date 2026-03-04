@@ -21,8 +21,8 @@ set -euo pipefail
 AWS_ACCOUNT_ID="713220200108"
 AWS_REGION="us-east-1"
 ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-BACKEND_IMAGE="${ECR_REGISTRY}/email-agentpulse-backend"
-FRONTEND_IMAGE="${ECR_REGISTRY}/email-agentpulse-frontend"
+BACKEND_IMAGE="${ECR_REGISTRY}/email-agent-backend"
+FRONTEND_IMAGE="${ECR_REGISTRY}/email-agent-frontend"
 NAMESPACE="email-agent"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -48,7 +48,7 @@ if $BUILD; then
     aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
     # Create ECR repos if they don't exist
-    for repo in email-agentpulse-backend email-agentpulse-frontend; do
+    for repo in email-agent-backend email-agent-frontend; do
         aws ecr describe-repositories --repository-names "$repo" --region "$AWS_REGION" 2>/dev/null || \
         aws ecr create-repository --repository-name "$repo" --region "$AWS_REGION" --image-scanning-configuration scanOnPush=true
     done
@@ -82,8 +82,8 @@ if $APPLY; then
     kubectl apply -f "$K8S_DIR/hpa.yaml"
 
     log "Waiting for rollout..."
-    kubectl rollout status deployment/email-agentpulse-backend -n "$NAMESPACE" --timeout=120s
-    kubectl rollout status deployment/email-agentpulse-frontend -n "$NAMESPACE" --timeout=120s
+    kubectl rollout status deployment/email-agent-backend -n "$NAMESPACE" --timeout=120s
+    kubectl rollout status deployment/email-agent-frontend -n "$NAMESPACE" --timeout=120s
 
     log "Deployment complete!"
     echo ""

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: email-agentpulse-config
+  name: email-agent-config
   namespace: email-agent
 data:
   # Application

@@ -19,5 +19,10 @@ dashboard/
 *.swo
 
 # Tests / misc
+tests/
 *.zip
 *.tar.gz
+
+# EKS / K8s (deployment only)
+eks/
+k8s/

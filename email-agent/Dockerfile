@@ -30,6 +30,7 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 # Copy application code
 COPY server.py agent.py main.py ./
 COPY tools/ ./tools/
+COPY skeleton/ ./skeleton/
 
 # If .env.example exists, copy it (will be overridden by configmap/secret at runtime)
 COPY .env.example .env.example
