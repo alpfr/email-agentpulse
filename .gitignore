@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.env
+token.json
+credentials.json
+
+# Node
+node_modules/
+.next/
+.env.local
+
+# OS
+.DS_Store
+*.zip
